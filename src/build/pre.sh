@@ -66,6 +66,23 @@ mmdef=${mmdef#0}
 # wget opts: superuser.com/a/689340
 wgetopts="--tries=3 --retry-on-http-error=404 --waitretry=3 --no-dns-cache"
 
+# Deno Deploy build images may lack wget; fall back to curl.
+download() {
+    # usage: download URL DEST
+    url="$1"
+    dest="$2"
+    if command -v wget >/dev/null 2>&1; then
+        wget $wgetopts -q "$url" -O "$dest"
+        return $?
+    elif command -v curl >/dev/null 2>&1; then
+        curl -fsSL --retry 3 --retry-delay 2 -o "$dest" "$url"
+        return $?
+    else
+        echo "pre.sh: neither wget nor curl found" >&2
+        return 127
+    fi
+}
+
 # stackoverflow.com/a/1445507
 max=4
 # 0..4 (5 loops)
@@ -79,7 +96,7 @@ do
         echo "=x== pre.sh: no op ${out}"
         exit 0
     else
-        wget $wgetopts -q "${burl}/${yyyy}/${dir}/${mm}-${wk}/${codec}/${f}" -O "${out}"
+        download "${burl}/${yyyy}/${dir}/${mm}-${wk}/${codec}/${f}" "${out}"
         wcode=$?
 
         if [ $wcode -eq 0 ]; then
@@ -90,7 +107,7 @@ do
                 fulltimestamp=$(cut -d"," -f8 "$out" | cut -d":" -f2 | tr -dc '0-9/')
             fi
             echo "==x= pre.sh: $i ok $wcode; filetag? ${fulltimestamp}"
-            wget $wgetopts -q "${burl}/${fulltimestamp}/${codec}/${f2}" -O "${out2}"
+            download "${burl}/${fulltimestamp}/${codec}/${f2}" "${out2}"
             wcode2=$?
             if [ $wcode2 -eq 0 ]; then
               echo "===x pre.sh: $i filetag ok $wcode2"
