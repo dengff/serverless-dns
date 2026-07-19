@@ -186,7 +186,19 @@ export function tlsKey() {
 
 export function allowDomainFronting() {
   if (!envManager) return false;
-  return envManager.get("TLS_ALLOW_ANY_SNI") || false;
+  return envManager.get("TLS_ALLOW_ANY_SNI");
+}
+
+export function allowTlsPsk() {
+  if (isBun()) return false;
+  return tlsPskHex() != null;
+}
+
+export function tlsPskHex() {
+  if (!envManager) return null;
+  const psk = envManager.get("TLS_PSK");
+  if (psk == null || psk.length <= 0) return null;
+  return b64tohexIfNeeded(psk);
 }
 
 export function kdfSvcSecretHex() {
@@ -323,7 +335,38 @@ export function hostId() {
 export function secretb64() {
   if (!envManager) return null;
 
-  return envManager.get("TOP_SECRET_512_B64") || null;
+  const psk = envManager.get("TLS_PSK");
+  if (psk != null && psk.length > 0) {
+    return hex2b64IfNeeded(psk);
+  }
+  const topsecret = envManager.get("TOP_SECRET_512_B64");
+  if (topsecret != null && topsecret.length > 0) {
+    return hex2b64IfNeeded(topsecret);
+  }
+  return null;
+}
+
+function hex2b64IfNeeded(h) {
+  const ishex = /^[0-9a-fA-F]+$/.test(h);
+  if (!ishex) return h;
+
+  const u8 = new Uint8Array(h.match(/.{1,2}/g).map((w) => parseInt(w, 16)));
+  const b64 = btoa(String.fromCharCode(...u8));
+  return b64;
+}
+
+/**
+ * @param {string} b64
+ * @returns {string}
+ */
+function b64tohexIfNeeded(b64) {
+  const ishex = /^[0-9a-fA-F]+$/.test(b64);
+  if (ishex) return b64;
+  // atob binary string is Latin-1 encoded, so each charCodeAt is a byte (8 bit).
+  const u8 = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  return Array.prototype.map
+    .call(u8, (b) => b.toString(16).padStart(2, "0"))
+    .join("");
 }
 
 export function accessKeys() {

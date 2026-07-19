@@ -9,7 +9,7 @@
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
-import { stub } from "../commons/util.js";
+// no imports!
 
 /**
  * @typedef {'error'|'logpush'|'warn'|'info'|'timer'|'debug'} LogLevels
@@ -32,14 +32,18 @@ function _setConsoleLevel(level) {
     case "error":
     case "logpush":
       globalThis.console.warn = stub();
+    /* falls through */
     case "warn":
       globalThis.console.info = stub();
+    /* falls through */
     case "info":
       globalThis.console.time = stub();
       globalThis.console.timeEnd = stub();
       globalThis.console.timeLog = stub();
+    /* falls through */
     case "timer":
       globalThis.console.debug = stub();
+    /* falls through */
     case "debug":
       break;
     default:
@@ -146,14 +150,17 @@ export default class Log {
       case "debug":
         this.d = console.debug;
         this.debug = console.debug;
+      /* falls through */
       case "timer":
       // deprecated; fallthrough
       case "info":
         this.i = console.info;
         this.info = console.info;
+      /* falls through */
       case "warn":
         this.w = console.warn;
         this.warn = console.warn;
+      /* falls through */
       case "error":
       case "logpush":
         this.e = console.error;
@@ -162,4 +169,54 @@ export default class Log {
     console.debug("Log level set: ", level);
     this.level = level;
   }
+}
+
+let loggerInstance = null;
+let fallbackLogger = null;
+
+function ensureFallbackLogger() {
+  if (!fallbackLogger) {
+    fallbackLogger = new Log({ level: "debug" });
+  }
+  return fallbackLogger;
+}
+
+export function setLogger(logger) {
+  loggerInstance = logger ?? null;
+  return loggerInstance;
+}
+
+export function getLogger() {
+  return loggerInstance ?? ensureFallbackLogger();
+}
+
+export function hasLogger() {
+  return loggerInstance != null;
+}
+
+export function loggerWithTags(...tags) {
+  return getLogger().withTags(...tags);
+}
+
+export const log = new Proxy(
+  {},
+  {
+    get(_target, prop) {
+      if (prop === "withTags") {
+        return (...tags) => loggerWithTags(...tags);
+      }
+      const logger = getLogger();
+      const value = logger[prop];
+      if (typeof value === "function") {
+        return value.bind(logger);
+      }
+      return value;
+    },
+  }
+);
+
+function stub() {
+  return () => {
+    /* no-op */
+  };
 }

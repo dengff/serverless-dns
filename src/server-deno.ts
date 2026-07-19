@@ -16,6 +16,7 @@ import * as util from "./commons/util.js";
 import * as bufutil from "./commons/bufutil.js";
 import * as dnsutil from "./commons/dnsutil.js";
 import * as envutil from "./commons/envutil.js";
+import { loggerWithTags } from "./core/log.js";
 
 let log: any = null;
 let listeners: Array<any> = [];
@@ -52,7 +53,7 @@ function systemDown() {
 }
 
 function systemUp() {
-  log = util.logger("Deno");
+  log = loggerWithTags("Deno");
   if (!log) throw new Error("logger unavailable on system up");
 
   const downloadmode = envutil.blocklistDownloadOnly() as boolean;
@@ -76,6 +77,7 @@ function systemUp() {
     onListen: undefined,
   };
 
+  // TODO: set TLS_KEY and TLS_CRT paths via env vars
   const crtpath = envutil.tlsCrtPath() as string;
   const keypath = envutil.tlsKeyPath() as string;
   const dotls = !onDenoDeploy && !isCleartext;
