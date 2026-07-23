@@ -84,7 +84,7 @@ download() {
 }
 
 # stackoverflow.com/a/1445507
-max=4
+max=12
 # 0..4 (5 loops)
 for i in $(seq 0 $max)
 do
