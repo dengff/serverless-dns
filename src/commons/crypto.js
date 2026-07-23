@@ -147,9 +147,13 @@ async function hkdf(sk) {
  * @param {int} len
  * @returns {HmacKeyGenParams}
  */
-function hmac256opts(len = 512) {
-  // length: 512 (bits) default for HMAC-SHA-256
-  return { name: "HMAC", hash: "SHA-256", length: len };
+function hmac256opts(len) {
+  // Do not force length:512 — Cloudflare WebCrypto rejects short raw keys
+  // (e.g. msg|domain for ACCESS_KEYS) when length exceeds key bit length.
+  // Omitting length lets the platform use the key's natural size (HMAC-SHA-256).
+  const opts = { name: "HMAC", hash: "SHA-256" };
+  if (typeof len === "number" && len > 0) opts.length = len;
+  return opts;
 }
 
 /**
