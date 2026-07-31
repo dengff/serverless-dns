@@ -249,8 +249,9 @@ export async function decryptAesGcm(aeskey, iv, taggedciphertext, aad) {
  * @returns {Promise<Uint8Array>} - The HMAC signature
  * @throws {Error} - If the key is not valid or signing fails
  */
-export function hmacsign(ck, m) {
-  const ab = crypto.subtle.sign("HMAC", ck, m);
+export async function hmacsign(ck, m) {
+  // Must await: normalize8(Promise) is empty and yields empty hex for ACCESS_KEYS.
+  const ab = await crypto.subtle.sign("HMAC", ck, m);
   return normalize8(ab);
 }
 
